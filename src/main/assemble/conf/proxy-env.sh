@@ -18,5 +18,7 @@
 CONF_DIR=$(readlink -f ./conf)
 LIB_DIR=./lib
 
+export JAVA_OPTS="-Xmx24g -Xms24g"
+
 CLASSPATH="$CONF_DIR:$LIB_DIR/*:$(accumulo classpath)"
 export CLASSPATH

@@ -21,4 +21,4 @@ cd $BIN_DIR/..
 
 . conf/proxy-env.sh
 
-java org.apache.accumulo.proxy.Proxy "${@}"
+java $JAVA_OPTS org.apache.accumulo.proxy.Proxy "${@}"

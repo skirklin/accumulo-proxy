@@ -975,6 +975,17 @@ service AccumuloProxy {
     3:AccumuloSecurityException ouch3
   )
 
+  ScanResult nextKOrSize(
+    1:string scanner
+    2:i32 k
+    3:i32 size
+  ) throws (
+    1:NoMoreEntriesException ouch1
+    2:UnknownScanner ouch2
+    3:AccumuloSecurityException ouch3
+  )
+
+
   void closeScanner(
     1:string scanner
   ) throws (

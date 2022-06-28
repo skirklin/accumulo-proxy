@@ -1328,6 +1328,49 @@ public class ProxyServer implements AccumuloProxy.Iface {
   }
 
   @Override
+  public ScanResult nextKOrSize(String scanner, int k, int bytes) throws NoMoreEntriesException,
+      UnknownScanner, org.apache.accumulo.proxy.thrift.AccumuloSecurityException, TException {
+
+    logger.info("Scanner " + scanner + " will not exceed " + String.valueOf(k) + " results or "
+        + String.valueOf(bytes) + " bytes");
+    // fetch the scanner
+    ScannerPlusIterator spi = getScanner(scanner);
+    Iterator<Map.Entry<Key,Value>> batchScanner = spi.iterator;
+    KeyValue kv;
+    // synchronized to prevent race conditions
+    synchronized (batchScanner) {
+      ScanResult ret = new ScanResult();
+      ret.setResults(new ArrayList<>());
+      int numRead = 0;
+      int payloadSize = 0;
+      try {
+        while (batchScanner.hasNext() && numRead < k && payloadSize < bytes) {
+          Map.Entry<Key,Value> next = batchScanner.next();
+          kv = new KeyValue(Util.toThrift(next.getKey()), ByteBuffer.wrap(next.getValue().get()));
+          ret.addToResults(kv);
+          payloadSize += kv.key.getRow().length + kv.key.getColFamily().length
+              + kv.key.getColQualifier().length + kv.key.getColVisibility().length + 8
+              + kv.getValue().length;
+          numRead++;
+          if (payloadSize > bytes) {
+            logger.info("Scanner " + scanner + " has buffered " + String.valueOf(payloadSize)
+                + " > " + String.valueOf(bytes) + " bytes");
+          }
+          if (numRead > k) {
+            logger.info("Scanner " + scanner + " has buffered " + String.valueOf(numRead) + " > "
+                + String.valueOf(k) + " results");
+          }
+        }
+        ret.setMore(numRead == k);
+      } catch (Exception ex) {
+        closeScanner(scanner);
+        throw new org.apache.accumulo.proxy.thrift.AccumuloSecurityException(ex.toString());
+      }
+      return ret;
+    }
+  }
+
+  @Override
   public void closeScanner(String scanner) throws UnknownScanner, TException {
     UUID uuid = null;
     try {
